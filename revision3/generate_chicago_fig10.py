@@ -80,7 +80,7 @@ axes[1].set_ylabel('Latitude', fontsize=12)
 axes[1].set_xlim([lon_min, lon_max])
 axes[1].set_ylim([lat_min, lat_max])
 
-plt.suptitle('Figure 10: Spatial detail comparison of NDUI+ and Dynamic World (Chicago Downtown)', fontsize=18, y=0.98)
+# plt.suptitle('Figure 10: Spatial detail comparison of NDUI+ and Dynamic World (Chicago Downtown)', fontsize=18, y=0.98)
 plt.tight_layout()
 
 # Save figure

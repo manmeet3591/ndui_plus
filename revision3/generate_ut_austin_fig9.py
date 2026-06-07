@@ -111,7 +111,7 @@ axes[2].set_ylabel('Latitude', fontsize=12)
 axes[2].set_xlim([lon_min_small, lon_max_small])
 axes[2].set_ylim([lat_min_small, lat_max_small])
 
-plt.suptitle('Figure 9: Spatial Validation of NDUI+ against Dynamic World built-up reference (UT Austin)', fontsize=20, y=0.98)
+# plt.suptitle('Figure 9: Spatial Validation of NDUI+ against Dynamic World built-up reference (UT Austin)', fontsize=20, y=0.98)
 plt.tight_layout()
 
 # Save figure

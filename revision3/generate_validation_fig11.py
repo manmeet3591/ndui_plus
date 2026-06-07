@@ -156,7 +156,7 @@ for idx, (city_name, city_path) in enumerate(cities.items()):
     axes[idx, 2].legend(loc="upper right")
     axes[idx, 2].set_xlim([1, psd_ndui.sizes["lon"] // 2])
 
-plt.suptitle('Figure 11: Representative Validation of NDUI+ across 5 US Cities with OSM Street Overlays and Zonal Energy Spectrum (PSD) comparison', fontsize=18, y=0.99)
+# plt.suptitle('Figure 11: Representative Validation of NDUI+ across 5 US Cities with OSM Street Overlays and Zonal Energy Spectrum (PSD) comparison', fontsize=18, y=0.99)
 plt.tight_layout()
 
 # Save combined figure

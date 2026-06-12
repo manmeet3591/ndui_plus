@@ -25,10 +25,10 @@ cities = {
     'Portland': '/media/airlab/ROCSTOR/ndui_plus/long_ndui/portland/ndui_portland_1999_2022.nc'
 }
 
-# Load GDW Built-up from GEE (Image Collection)
+# Load GDW Built-up and Water layers from GEE (Image Collection)
 gdw_image = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1') \
               .filterDate('2015-01-01', '2024-12-31') \
-              .select('built') \
+              .select(['built', 'water']) \
               .mean()
 gdw_image = gdw_image.set('system:time_start', 0)
 
@@ -87,9 +87,9 @@ for idx, (city_name, city_path) in enumerate(cities.items()):
     aoi_gee = ee.Geometry.Rectangle(list(aoi_bbox))
     
     # Fetch GDW Built-up layer from GEE
-    print(f"Fetching GDW Built-up layer for {city_name}...")
+    print(f"Fetching GDW layers for {city_name}...")
     ds_gdw = gdw_image.wx.to_xarray(region=aoi_gee, scale=30)
-    gdw_var = list(ds_gdw.data_vars)[0]
+    gdw_var = 'built'
     if 'x' in ds_gdw.coords:
         ds_gdw = ds_gdw.rename({'x': 'lon', 'y': 'lat'})
         
@@ -110,6 +110,13 @@ for idx, (city_name, city_path) in enumerate(cities.items()):
         
     # Align grids
     ds_gdw_aligned = ds_gdw.interp(lat=ds_ndui_small.lat, lon=ds_ndui_small.lon, method='nearest')
+    
+    # Create water mask (water probability < 0.3) to prevent high NDUI artifacts on water bodies
+    water_mask = ds_gdw_aligned['water'].fillna(0) < 0.3
+    
+    # Mask both NDUI+ and DW Built-up
+    ndui_masked = ds_ndui_small[ndui_var] * water_mask
+    gdw_masked = ds_gdw_aligned[gdw_var] * water_mask
         
     # Fetch OSM streets using osmnx
     print(f"Fetching OSM streets for {city_name}...")
@@ -122,11 +129,11 @@ for idx, (city_name, city_path) in enumerate(cities.items()):
 
     # Calculate PSD
     print(f"Calculating PSD for {city_name}...")
-    psd_ndui = compute_zonal_energy_spectrum(ds_ndui_small[ndui_var])
-    psd_gdw = compute_zonal_energy_spectrum(ds_gdw_aligned[gdw_var])
+    psd_ndui = compute_zonal_energy_spectrum(ndui_masked)
+    psd_gdw = compute_zonal_energy_spectrum(gdw_masked)
     
-    # Plotting Panel 1: NDUI+ Map
-    ds_ndui_small[ndui_var].plot(ax=axes[idx, 0], cmap='YlOrRd', vmin=0, vmax=1, add_colorbar=True, cbar_kwargs={'shrink': 0.7, 'label': 'NDUI+ Value'})
+    # Plotting Panel 1: NDUI+ Map (Masked)
+    ndui_masked.plot(ax=axes[idx, 0], cmap='YlOrRd', vmin=0, vmax=1, add_colorbar=True, cbar_kwargs={'shrink': 0.7, 'label': 'NDUI+ Value'})
     if edges is not None:
         edges.plot(ax=axes[idx, 0], edgecolor='black', linewidth=0.5, alpha=0.5)
     axes[idx, 0].set_title(f"NDUI+ Map ({city_name})", fontsize=12)
@@ -135,8 +142,8 @@ for idx, (city_name, city_path) in enumerate(cities.items()):
     axes[idx, 0].set_xlim([lon_mid - 0.1, lon_mid + 0.1])
     axes[idx, 0].set_ylim([lat_mid - 0.1, lat_mid + 0.1])
     
-    # Plotting Panel 2: Google Dynamic World Map
-    ds_gdw_aligned[gdw_var].plot(ax=axes[idx, 1], cmap='YlOrRd', vmin=0, vmax=1, add_colorbar=True, cbar_kwargs={'shrink': 0.7, 'label': 'Built-up Probability'})
+    # Plotting Panel 2: Google Dynamic World Map (Masked)
+    gdw_masked.plot(ax=axes[idx, 1], cmap='YlOrRd', vmin=0, vmax=1, add_colorbar=True, cbar_kwargs={'shrink': 0.7, 'label': 'Built-up Probability'})
     if edges is not None:
         edges.plot(ax=axes[idx, 1], edgecolor='black', linewidth=0.5, alpha=0.5)
     axes[idx, 1].set_title(f"Dynamic World Built-up ({city_name})", fontsize=12)

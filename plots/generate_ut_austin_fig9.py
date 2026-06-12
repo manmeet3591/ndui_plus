@@ -30,22 +30,28 @@ lat_min_large, lat_max_large = latitude_center - 0.025, latitude_center + 0.025
 lon_min_large, lon_max_large = longitude_center - 0.025, longitude_center + 0.025
 
 aoi_small = ee.Geometry.Rectangle([lon_min_small, lat_min_small, lon_max_small, lat_max_small])
+aoi_large = ee.Geometry.Rectangle([lon_min_large, lat_min_large, lon_max_large, lat_max_large])
 
-# 3. Fetch Dynamic World Built-up mean (2015-2024) from GEE
-print("Fetching Dynamic World Built-up from GEE...")
+# 3. Fetch Dynamic World Built-up & Water (2015-2024) from GEE
+print("Fetching Dynamic World layers from GEE...")
 start_date = '2015-01-01'
 end_date = '2024-12-31'
 dw_collection = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1') \
                   .filterDate(start_date, end_date) \
-                  .select('built') \
+                  .select(['built', 'water']) \
                   .mean()
 dw_collection = dw_collection.set('system:time_start', 0)
-ds_built = dw_collection.wx.to_xarray(region=aoi_small, scale=30)
-dw_var = list(ds_built.data_vars)[0]
+ds_gdw_large = dw_collection.wx.to_xarray(region=aoi_large, scale=30)
 
 # Rename coordinates if necessary
-if 'x' in ds_built.coords:
-    ds_built = ds_built.rename({'x': 'lon', 'y': 'lat'})
+if 'x' in ds_gdw_large.coords:
+    ds_gdw_large = ds_gdw_large.rename({'x': 'lon', 'y': 'lat'})
+
+# Squeeze and drop time dimensions
+if 'time' in ds_gdw_large.dims:
+    ds_gdw_large = ds_gdw_large.squeeze(dim='time')
+if 'time' in ds_gdw_large.coords:
+    ds_gdw_large = ds_gdw_large.drop_vars('time')
 
 # 4. Load local NDUI+ data for Austin
 print("Loading local NDUI+ data...")
@@ -64,6 +70,19 @@ ds_ndui_large = ds_ndui_mean.sel(
     lon=slice(lon_min_large, lon_max_large)
 )
 
+# Align GDW to large and small domains
+ds_gdw_aligned_large = ds_gdw_large.interp(lat=ds_ndui_large.lat, lon=ds_ndui_large.lon, method='nearest')
+ds_gdw_aligned_small = ds_gdw_large.interp(lat=ds_ndui_small.lat, lon=ds_ndui_small.lon, method='nearest')
+
+# Create water masks (water probability < 0.3)
+water_mask_large = ds_gdw_aligned_large['water'].fillna(0) < 0.3
+water_mask_small = ds_gdw_aligned_small['water'].fillna(0) < 0.3
+
+# Apply masks
+ds_ndui_large_masked = ds_ndui_large * water_mask_large
+ds_ndui_small_masked = ds_ndui_small * water_mask_small
+ds_built_small_masked = ds_gdw_aligned_small['built'] * water_mask_small
+
 # 5. Fetch OSM street network
 print("Fetching OSM street network using osmnx...")
 bbox_large = (lon_min_large, lat_min_large, lon_max_large, lat_max_large)
@@ -74,8 +93,8 @@ edges_large = ox.graph_to_gdfs(G_large, nodes=False, edges=True)
 print("Generating plot...")
 fig, axes = plt.subplots(1, 3, figsize=(24, 8), dpi=300)
 
-# Panel 1: Larger Domain NDUI+ Map with OSM streets
-ds_ndui_large.plot(ax=axes[0], cmap='YlOrRd', add_colorbar=True, cbar_kwargs={'label': 'NDUI+ Value', 'shrink': 0.8})
+# Panel 1: Larger Domain NDUI+ Map with OSM streets (Masked)
+ds_ndui_large_masked.plot(ax=axes[0], cmap='YlOrRd', vmin=0, vmax=1, add_colorbar=True, cbar_kwargs={'label': 'NDUI+ Value', 'shrink': 0.8})
 edges_large.plot(ax=axes[0], edgecolor='black', linewidth=0.5, alpha=0.5)
 
 # Add a rectangle showing the inset boundary
@@ -92,9 +111,8 @@ axes[0].set_ylabel('Latitude', fontsize=12)
 axes[0].set_xlim([lon_min_large, lon_max_large])
 axes[0].set_ylim([lat_min_large, lat_max_large])
 
-# Panel 2: Zoomed-in Dynamic World Built-up Map with OSM streets (no dots)
-ds_built_small = ds_built[dw_var]
-ds_built_small.plot(ax=axes[1], cmap='YlOrRd', add_colorbar=True, cbar_kwargs={'label': 'Built-up Probability', 'shrink': 0.8})
+# Panel 2: Zoomed-in Dynamic World Built-up Map with OSM streets (Masked)
+ds_built_small_masked.plot(ax=axes[1], cmap='YlOrRd', vmin=0, vmax=1, add_colorbar=True, cbar_kwargs={'label': 'Built-up Probability', 'shrink': 0.8})
 edges_large.plot(ax=axes[1], edgecolor='black', linewidth=0.8, alpha=0.6)
 axes[1].set_title('Dynamic World Built-up Area\n(Zoomed-in Inset)', fontsize=16)
 axes[1].set_xlabel('Longitude', fontsize=12)
@@ -102,8 +120,8 @@ axes[1].set_ylabel('Latitude', fontsize=12)
 axes[1].set_xlim([lon_min_small, lon_max_small])
 axes[1].set_ylim([lat_min_small, lat_max_small])
 
-# Panel 3: Zoomed-in NDUI+ Map with OSM streets (no dots)
-ds_ndui_small.plot(ax=axes[2], cmap='YlOrRd', add_colorbar=True, cbar_kwargs={'label': 'NDUI+ Value', 'shrink': 0.8})
+# Panel 3: Zoomed-in NDUI+ Map with OSM streets (Masked)
+ds_ndui_small_masked.plot(ax=axes[2], cmap='YlOrRd', vmin=0, vmax=1, add_colorbar=True, cbar_kwargs={'label': 'NDUI+ Value', 'shrink': 0.8})
 edges_large.plot(ax=axes[2], edgecolor='black', linewidth=0.8, alpha=0.6)
 axes[2].set_title('NDUI+ Data\n(Zoomed-in Inset)', fontsize=16)
 axes[2].set_xlabel('Longitude', fontsize=12)

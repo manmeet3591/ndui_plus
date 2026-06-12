@@ -24,17 +24,16 @@ lon_min, lon_max = longitude_center - 0.01, longitude_center + 0.01
 
 aoi = ee.Geometry.Rectangle([lon_min, lat_min, lon_max, lat_max])
 
-# 3. Fetch Dynamic World Built-up for 2020 from GEE
-print("Fetching Dynamic World Built-up from GEE...")
+# 3. Fetch Dynamic World Built-up & Water for 2020 from GEE
+print("Fetching Dynamic World layers from GEE...")
 start_date = '2020-01-01'
 end_date = '2020-12-31'
 dw_collection = ee.ImageCollection('GOOGLE/DYNAMICWORLD/V1') \
                   .filterDate(start_date, end_date) \
-                  .select('built') \
+                  .select(['built', 'water']) \
                   .mean()
 dw_collection = dw_collection.set('system:time_start', 0)
 ds_built = dw_collection.wx.to_xarray(region=aoi, scale=30)
-dw_var = list(ds_built.data_vars)[0]
 
 # Rename coordinates if necessary
 if 'x' in ds_built.coords:
@@ -57,13 +56,33 @@ bbox = (lon_min, lat_min, lon_max, lat_max)
 G = ox.graph_from_bbox(bbox, network_type='drive')
 edges = ox.graph_to_gdfs(G, nodes=False, edges=True)
 
+# Clean coordinate dimensions to avoid interpolation conflicts
+if 'time' in ds_ndui_selected.dims:
+    ds_ndui_selected = ds_ndui_selected.squeeze(dim='time')
+if 'time' in ds_ndui_selected.coords:
+    ds_ndui_selected = ds_ndui_selected.drop_vars('time')
+    
+if 'time' in ds_built.dims:
+    ds_built = ds_built.squeeze(dim='time')
+if 'time' in ds_built.coords:
+    ds_built = ds_built.drop_vars('time')
+
+# Align grids
+ds_built_aligned = ds_built.interp(lat=ds_ndui_selected.lat, lon=ds_ndui_selected.lon, method='nearest')
+
+# Create water mask (water probability < 0.3)
+water_mask = ds_built_aligned['water'].fillna(0) < 0.3
+
+# Mask both NDUI and DW Built-up
+ndui_masked = ds_ndui_selected * water_mask
+gdw_masked = ds_built_aligned['built'] * water_mask
+
 # 6. Plotting
 print("Generating plot...")
 fig, axes = plt.subplots(1, 2, figsize=(18, 8), dpi=300)
 
-# Panel 1: Dynamic World Built-up Map with OSM streets
-ds_built_small = ds_built[dw_var]
-ds_built_small.plot(ax=axes[0], cmap='YlOrRd', add_colorbar=True, cbar_kwargs={'label': 'Built-up Probability', 'shrink': 0.8})
+# Panel 1: Dynamic World Built-up Map with OSM streets (Masked)
+gdw_masked.plot(ax=axes[0], cmap='YlOrRd', vmin=0, vmax=1, add_colorbar=True, cbar_kwargs={'label': 'Built-up Probability', 'shrink': 0.8})
 edges.plot(ax=axes[0], edgecolor='black', linewidth=0.8, alpha=0.6)
 axes[0].set_title('Dynamic World Built-up Area\n(Chicago Downtown)', fontsize=16)
 axes[0].set_xlabel('Longitude', fontsize=12)
@@ -71,8 +90,8 @@ axes[0].set_ylabel('Latitude', fontsize=12)
 axes[0].set_xlim([lon_min, lon_max])
 axes[0].set_ylim([lat_min, lat_max])
 
-# Panel 2: NDUI+ Map with OSM streets
-ds_ndui_selected.plot(ax=axes[1], cmap='YlOrRd', add_colorbar=True, cbar_kwargs={'label': 'NDUI+ Value', 'shrink': 0.8})
+# Panel 2: NDUI+ Map with OSM streets (Masked)
+ndui_masked.plot(ax=axes[1], cmap='YlOrRd', vmin=0, vmax=1, add_colorbar=True, cbar_kwargs={'label': 'NDUI+ Value', 'shrink': 0.8})
 edges.plot(ax=axes[1], edgecolor='black', linewidth=0.8, alpha=0.6)
 axes[1].set_title('NDUI+ Data\n(Chicago Downtown)', fontsize=16)
 axes[1].set_xlabel('Longitude', fontsize=12)

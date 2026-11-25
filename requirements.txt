@@ -1,0 +1,12 @@
+torch>=2.0
+torchvision
+timm
+tensorboard
+numpy
+pandas
+xarray
+netCDF4
+scipy
+matplotlib
+earthengine-api
+wxee

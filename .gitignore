@@ -1,0 +1,3 @@
+# Earth Engine service-account keys: never commit
+ee-*.json
+*service-account*.json

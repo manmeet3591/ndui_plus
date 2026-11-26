@@ -4,7 +4,7 @@ Usage: python pipeline/train_cell_weights.py <lat_center> <lon_center>
        e.g. python pipeline/train_cell_weights.py 42.5 -87.5   (cell 40-45N, 90-85W)
 
 This is the script that produced the 1,011 weight files and water masks deposited at
-doi:10.5281/zenodo.13953525. Outputs (written to the current directory):
+doi:10.5281/zenodo.24545916. Outputs (written to the current directory):
   best_model_lats_<S>_late_<N>_lons_<W>_lone_<E>.pth   SwinIR state_dict
   water_dw_2017_<S>_late_<N>_lons_<W>_lone_<E>.nc      Dynamic World 2017 mean water probability, 500 m
 See README.md (section "Training details") for the data split and hyperparameters.

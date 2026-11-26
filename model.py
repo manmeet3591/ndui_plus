@@ -15,7 +15,7 @@ import torch
 from SwinIR_train_function import SwinIR
 
 # Exact hyperparameters used to train every weight file deposited on Zenodo
-# (doi:10.5281/zenodo.13953525) and every city model in this repository.
+# (doi:10.5281/zenodo.24545916) and every city model in this repository.
 SWINIR_CONFIG = dict(
     upscale=1,                     # same grid in and out (VIIRS regridded to the DMSP grid)
     in_chans=1,                    # single band: VIIRS avg_rad -> DMSP stable_lights

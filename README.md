@@ -8,7 +8,7 @@ DMSP-OLS record. A SwinIR model is trained per region to translate VIIRS night l
 DMSP-OLS-equivalent ("calibrated VIIRS") night lights for 2013 onward. These are fused with
 annual 30 m Landsat NDVI to give a continuous annual NDUI series.
 
-* **Trained weights and water masks:** Zenodo, doi:[10.5281/zenodo.13953525](https://doi.org/10.5281/zenodo.13953525)
+* **Trained weights and water masks:** Zenodo, doi:[10.5281/zenodo.24545916](https://doi.org/10.5281/zenodo.24545916)
   (`weights.tar.gz`, `water.tar.gz`). See [Data on Zenodo](#data-on-zenodo).
 * **NDUI+ maps** are generated on demand from these weights with the code here, because a
   30 m annual global product (1999–2024) is too large to deposit as files.
@@ -132,7 +132,7 @@ figure year.
 
 ## 6. Data on Zenodo
 
-doi:[10.5281/zenodo.13953525](https://doi.org/10.5281/zenodo.13953525). The deposit has its own
+doi:[10.5281/zenodo.24545916](https://doi.org/10.5281/zenodo.24545916). The deposit has its own
 README describing both archives. In brief:
 
 * `weights.tar.gz` (3.4 GB) → `weights/best_model_lats_<S>_late_<N>_lons_<W>_lone_<E>.pth`:
@@ -145,9 +145,9 @@ README describing both archives. In brief:
 ## 7. Citation
 
 Singh, M., Ghosh, S., Kamath, H., Saxena, S., SB, V., Mitra, C., Sudharsan, N., Rao, S., Dashtian,
-H., Magruder, L., Shepherd, M., & Niyogi, D. (2024). *NDUI+: A fused DMSP-VIIRS based multidecadal,
-high-resolution global normalized difference urban index (NDUI) dataset* [Data set]. Zenodo.
-https://doi.org/10.5281/zenodo.13953525
+H., Magruder, L., Shepherd, M., & Niyogi, D. (2026). *NDUI+: A fused DMSP–VIIRS global normalized difference urban index
+dataset for annual 30 m urban monitoring* [Data set]. Zenodo.
+https://doi.org/10.5281/zenodo.24545916
 
 Please also cite SwinIR: Liang, J. et al. (2021). SwinIR: Image restoration using Swin
 Transformer. *ICCV Workshops*, 1833–1844.
